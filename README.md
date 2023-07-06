@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  Welcome to **DTU Seat Alert Bot**, your personal assistant for staying updated on available seats in DTU subjects.
+  Welcome to <strong>DTU Seat Alert Bot</strong>, your personal assistant for staying updated on available seats in DTU subjects.
 </p>
 
 ## Table of Contents
