@@ -31,11 +31,22 @@
 ## Commands
 The following commands are available to interact with the bot:
 
-- <b>/start</b> - To start the bot.
-- <b>/seats</b> - To look for the new available seats.
-- <b>/update</b> - Subscribe to receive notifications for a specific subject code.
-- <b>/revoke</b> - Revoke your subscription to seat notifications.
-- <b>/search</b> - Enter subject code after the command to get the number of available seats in that subject.
+👋 <b>/start -</b> Start the bot and initiate the conversation.
+
+📚 <b>/seats -</b> Check for the availability of new seats in subjects.
+
+🔔 <b>/update -</b> Subscribe to receive notifications for a specific subject code.
+
+🚫 <b>/revoke -</b> Revoke your subscription to seat notifications.
+
+🔎 <b>/search -</b> Get the number of available seats in a specific subject. Enter the subject code after the command.
+
+✏️ <b>/register -</b> Register yourself for subject exchange. Provide your give and take values for subjects you are willing to give and take.
+
+🚫 <b>/unregister -</b> Unregister yourself from subject exchange. Remove your registration and information from the exchange list.
+
+💡 <b>/exchange -</b> Check if there is any match for you to exchange subjects based on your give and take values.
+
 
 ## Usage
 1. Start the bot by sending the <b>/start</b> command.
