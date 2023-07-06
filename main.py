@@ -7,6 +7,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -29,16 +30,90 @@ data=""
 # DATABASE CONNECTION 
 client = pymongo.MongoClient(f"mongodb+srv://{DB_USERNAME}:{DB_PASSWORD}@cluster0.1e3sslc.mongodb.net/?retryWrites=true&w=majority")
 db = client.subjectRegistration
+give_take_collection=db.giveTake
 users_collection = db.users
 subject_seats_collection = db.subjectSeats
 
-most_recent_document = None if subject_seats_collection.count_documents({}) < 1 else subject_seats_collection.find_one({}, sort=[('$natural', -1)])
-course_map = {} if most_recent_document == None else dict(most_recent_document)
-second_last_document = None if subject_seats_collection.count_documents({}) <= 1 else subject_seats_collection.find_one({}, sort=[('$natural', -1)], skip=1)
-previous_map = {} if second_last_document == None else dict(second_last_document)
+most_recent_document = subject_seats_collection.find_one({}, sort=[('$natural', -1)])
+course_map = dict(most_recent_document) if most_recent_document else {}
+
+second_last_document = subject_seats_collection.find_one({}, sort=[('$natural', -1)], skip=1)
+previous_map = dict(second_last_document) if second_last_document else {}
+
 
 user_ids_dict = list(users_collection.find({}, {"_id": 0, "user_id": 1}))
 user_ids = list(map(lambda item: item["user_id"], user_ids_dict))
+
+
+@bot.message_handler(commands=['register'])
+def register(message):
+    user_id = message.chat.id
+    bot.reply_to(message, '<b>Please provide your give subject code.</b>', parse_mode="HTML")
+    bot.register_next_step_handler(message, lambda msg: process_give(msg, user_id))
+
+def process_give(message, user_id):
+    give_value = message.text.upper()
+    bot.reply_to(message, '<b>Please provide your take subject code.</b>', parse_mode="HTML")
+    bot.register_next_step_handler(message, lambda msg: process_take(msg, user_id, give_value))
+
+def process_take(message, user_id, give_value):
+    take_value = message.text.upper()
+    bot.reply_to(message, '<b>Please provide your contact info.</b>', parse_mode="HTML")
+    bot.register_next_step_handler(message, lambda msg: process_contact_info(msg, user_id, give_value, take_value))
+
+def process_contact_info(message, user_id, give_value, take_value):
+    contact_info = message.text
+    user = {
+        "user_id": user_id,
+        "give_value": give_value,
+        "take_value": take_value,
+        "contact_info": contact_info
+    }
+    give_take_collection.insert_one(user)
+    bot.send_message(user_id, "<b>You have been registered successfully!</b>",parse_mode="HTML")
+    
+@bot.message_handler(commands=['unregister'])
+def unregister(message):
+    user_id = message.chat.id
+    bot.reply_to(message, '<b>Please provide your give subject code to unregister.</b>', parse_mode="HTML")
+    bot.register_next_step_handler(message, lambda msg: process_unregister(msg, user_id))
+
+def process_unregister(message, user_id):
+    give_value = message.text.upper()
+    bot.reply_to(message, '<b>Please provide your take subject code to unregister.</b>', parse_mode="HTML")
+    bot.register_next_step_handler(message, lambda msg: confirm_unregister(msg, user_id, give_value))
+
+def confirm_unregister(message, user_id, give_value):
+    take_value = message.text.upper()
+    result = give_take_collection.delete_many({"user_id": user_id, "give_value": give_value, "take_value": take_value})
+    if result.deleted_count > 0:
+        bot.send_message(user_id, "<b>You have been unregistered successfully.</b>",parse_mode="HTML")
+    else:
+        bot.send_message(user_id, "<b>You are not registered.</b>",parse_mode="HTML")
+
+@bot.message_handler(commands=['exchange'])
+def find_matches(message):
+    user_id = message.chat.id
+    bot.reply_to(message, 'Please enter your give subject code:')
+    bot.register_next_step_handler(message, lambda msg: process_give_code(msg, user_id))
+
+def process_give_code(message, user_id):
+    give_value = message.text.upper()
+    bot.reply_to(message, 'Please enter your take subject code:')
+    bot.register_next_step_handler(message, lambda msg: process_take_code(msg, user_id, give_value))
+
+def process_take_code(message, user_id, give_value):
+    take_value = message.text.upper()
+    matches = give_take_collection.count_documents({"give_value": take_value, "take_value": give_value})
+
+    if matches > 0:
+        match_info = "Matching users found:\n"
+        for user in give_take_collection.find({"give_value": take_value, "take_value": give_value}):
+            match_info += f"<b>Contact Info:</b> {user['contact_info']}\n"
+        bot.send_message(user_id, match_info,parse_mode="HTML")
+    else:
+        bot.send_message(user_id, "<b>Sorry, No matching users found.</b>",parse_mode="HTML")
+
 
 @bot.message_handler(commands=['search'])
 def handle_search(message):
@@ -62,8 +137,7 @@ def update(message):
     user_id = message.chat.id
     user_doc = users_collection.find_one({"user_id": user_id})
     if user_doc is not None:
-        bot.reply_to(message, '<b>You have already been granted permission, Here are the updated available seats</b>',parse_mode="HTML")
-        notify(user_id,data)
+        bot.reply_to(message, '<b>You have already been granted permission, Press /seats for more information.</b>',parse_mode="HTML")
     else:
         users_collection.insert_one({"user_id": user_id})
         bot.reply_to(message, '<b>You have been granted permission.</b>',parse_mode="HTML")
@@ -75,7 +149,7 @@ def seats(message):
     course_map_string = "<b>Subject Codes: Seats</b>\n"
     for subject_code, seats in course_map.items():
         if seats != "0" and seats!="Not available" and subject_code != "_id" and subject_code != "Group" and subject_code != "Set":
-            course_map_string += f"<b>{subject_code}</b>: {seats}\n"
+            course_map_string += f"<b>{subject_code}</b>: <b>{seats}</b>\n"
     if course_map_string == "<b>Subject Codes: Seats</b>\n":
         bot.send_message(user_id, "<b>No Seats are Available Right Now, Try Later</b>", parse_mode="HTML")
     else:
@@ -109,11 +183,14 @@ def revoke_permission(message):
 def handle_start(message):
     # Prepare the list of commands
     commands = [
-        '<b>/start  -</b> To start the bot',
-        '<b>/seats -</b> To look for the new available seats',
-        '<b>/update -</b> Subscribe to receive notifications for a specific subject code',
-        '<b>/revoke -</b> Revoke your subscription to seat notifications',
-        '<b>/search -</b> Enter subject code after the command to get the number of available seats in that subject'
+        "👋 <b>/start -</b> Start the bot.",
+        "📚 <b>/seats -</b> Check seat availability.",
+        "🔔 <b>/update -</b> Subscribe for seat notifications.",
+        "🚫 <b>/revoke -</b> Revoke seat notifications.",
+        "🔎 <b>/search -</b> Get seat count for a subject.",
+        "✏️ <b>/register -</b> Register for subject exchange.",
+        "🚫 <b>/unregister -</b> Unregister from subject exchange.",
+        "💡 <b>/exchange -</b> Check subject exchange matches."
     ]
 
     commands_text = '\n'.join(commands)
@@ -134,17 +211,19 @@ def scrape_function():
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--disable-dev-shm-usage')
-    driver = webdriver.Chrome('/usr/local/bin/chromedriver',options=chrome_options)
-
+    service = Service(executable_path=r'/usr/local/bin/chromedriver')
+    driver = webdriver.Chrome(service=service, options=chrome_options)
     loginurl = ('https://cumsdtu.in/registration_student/login/login.jsp?courseRegistration')
 
+    # For deployment the path is /usr/bin/chromedriver
     # Login Credentials
 
     usernameId = str(os.environ['usernameId'])
     passwordId = str(os.environ['passwordId'])
     
     driver.get(loginurl)
-
+   
+    print(loginurl);
     RN = driver.find_element(
       By.ID, 'usernameId')
     RN.send_keys(usernameId)
@@ -179,6 +258,11 @@ def scrape_function():
 
         subject_seats_dict[subject_code] = seats
 
+    subject_seats_dict_size = len(subject_seats_dict)
+
+    if subject_seats_dict_size == 1:
+        scrape_function()
+
     document =  subject_seats_dict
     
     subject_seats_collection.insert_one(document)
@@ -189,18 +273,18 @@ def scrape_function():
 
     course_map = {} if most_recent_document == None else dict(most_recent_document)
     
-    notification_message = "<b>✨ Seats Availability Update</b>\n"
+    notification_message = "<b>✨ Seats Availability Update</b>\n --------------------------------------------- \n"
     
     count = 0
 
     for subject_code, current_seats in course_map.items():
-        if subject_code == "_id":
+        if subject_code == "_id" or subject_code == "Set" or subject_code == "Group":
             continue
         previous_seats = previous_map.get(subject_code)
         if previous_seats is None or (previous_seats is not None and current_seats != previous_seats):
-            count += 1
-            x = f"<b>{subject_code}</b> -> <b>{current_seats}</b>."
-            notification_message += x + "\n"
+                count += 1
+                x = f"<b>{subject_code}</b> -> <b>{current_seats}</b>."
+                notification_message += x + "\n"
 
     if count != 0:
         notify(user_ids, notification_message)
@@ -221,7 +305,7 @@ def task_function():
   while True:
       try:
         scrape_function()
-        time.sleep(10)
+        time.sleep(20)
       except Exception as e:
         print(e)
         time.sleep(5)
