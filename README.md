@@ -1,7 +1,7 @@
 <h1 align="center">🔔 DTU Seat Alert Bot 🎓</h1>
 
 <p align="center">
-  <img src="https://img.freepik.com/free-vector/cute-robot-holding-phone-with-laptop-cartoon-vector-icon-illustration-science-technology-isolated_138676-4870.jpg?w=996&t=st=1688603037~exp=1688603637~hmac=62fdb9704c88f1b7ced6da70fac8a925569870977b3379851fe2688d14171d5d" alt="Bot Logo" width="200">
+  <img src="./DTUSeatAlertBotImages/seatalertbotimage.png" alt="Bot Logo" width="200">
 </p>
 
 <p align="center">
@@ -13,6 +13,7 @@
 - [Features](#features)
 - [Commands](#commands)
 - [Usage](#usage)
+- [Screenshots](#screenshots)
 - [Getting Started](#getting-started)
 - [Deploying on AWS EC2](#deploying-on-aws-ec2)
 - [Contributing](#contributing)
@@ -47,6 +48,9 @@ The following commands are available to interact with the bot:
 
 💡 <b>/exchange -</b> Check if there is any match for you to exchange subjects based on your give and take values.
 
+🔗 <b>/addwa -</b> To add the whatsapp link of the subject code.
+
+🔗 <b>/getwa -</b> To get the whatsapp link of the subject code.
 
 ## Usage
 1. Start the bot by sending the <b>/start</b> command.
@@ -54,6 +58,16 @@ The following commands are available to interact with the bot:
 3. Subscribe to receive notifications for a specific subject code using the <b>/update</b> command followed by the subject code.
 4. Use the <b>/revoke</b> command to unsubscribe from seat notifications.
 5. Search for the number of available seats in a subject using the <b>/search</b> command followed by the subject code.
+
+## Screenshots
+
+|      **Start**      |     **Seats**      | 
+|-------------------------|-----------------------|
+| ![Start](./DTUSeatAlertBotImages/start.jpeg) | ![seats](./DTUSeatAlertBotImages/seats.jpeg) |
+
+|      **Update**      |     **Search**      |
+|-------------------------|-----------------------|
+| ![update](./DTUSeatAlertBotImages/update.jpeg) | ![search](./DTUSeatAlertBotImages/search.jpeg) |
 
 ## Getting Started
 To get started with the **DTU Seat Alert Bot**, follow these steps:
